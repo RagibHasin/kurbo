@@ -208,7 +208,7 @@ impl BezPath {
     ///
     /// [Flattening quadratic Béziers]: https://raphlinus.github.io/graphics/curves/2019/12/23/flatten-quadbez.html
     /// [`PathEl`]: enum.PathEl.html
-    pub fn flatten(&self, tolerance: f64, callback: impl FnMut(PathEl)) {
+    pub fn flatten(&self, tolerance: f64, callback: impl FnMut(PathEl, usize, f64, f64)) {
         flatten(self, tolerance, callback);
     }
 
@@ -323,20 +323,26 @@ const TO_QUAD_TOL: f64 = 0.1;
 pub fn flatten(
     path: impl IntoIterator<Item = PathEl>,
     tolerance: f64,
-    mut callback: impl FnMut(PathEl),
+    mut callback: impl FnMut(PathEl, usize, f64, f64),
 ) {
     let sqrt_tol = tolerance.sqrt();
     let mut last_pt = None;
     let mut quad_buf = Vec::new();
-    for el in path {
+
+    #[inline]
+    fn map_range(from: (f64, f64), to: (f64, f64), val: f64) -> f64 {
+        to.0 + (val - from.0) * (to.1 - to.0) / (from.1 - from.0)
+    }
+
+    for (idx, el) in path.into_iter().enumerate() {
         match el {
             PathEl::MoveTo(p) => {
                 last_pt = Some(p);
-                callback(PathEl::MoveTo(p));
+                callback(PathEl::MoveTo(p), idx, 0., 1.);
             }
             PathEl::LineTo(p) => {
                 last_pt = Some(p);
-                callback(PathEl::LineTo(p));
+                callback(PathEl::LineTo(p), idx, 0., 1.);
             }
             PathEl::QuadTo(p1, p2) => {
                 if let Some(p0) = last_pt {
@@ -344,13 +350,15 @@ pub fn flatten(
                     let params = q.estimate_subdiv(sqrt_tol);
                     let n = ((0.5 * params.val / sqrt_tol).ceil() as usize).max(1);
                     let step = 1.0 / (n as f64);
+                    let mut t_ = 0.;
                     for i in 1..(n - 1) {
                         let u = (i as f64) * step;
                         let t = q.determine_subdiv_t(&params, u);
                         let p = q.eval(t);
-                        callback(PathEl::LineTo(p));
+                        callback(PathEl::LineTo(p), idx, t_, t);
+                        t_ = t;
                     }
-                    callback(PathEl::LineTo(p2));
+                    callback(PathEl::LineTo(p2), idx, t_, 1.);
                 }
                 last_pt = Some(p2);
             }
@@ -367,10 +375,10 @@ pub fn flatten(
                     quad_buf.reserve(iter.size_hint().0);
                     let sqrt_remain_tol = sqrt_tol * (1.0 - TO_QUAD_TOL).sqrt();
                     let mut sum = 0.0;
-                    for (_, _, q) in iter {
+                    for (t0, t1, q) in iter {
                         let params = q.estimate_subdiv(sqrt_remain_tol);
                         sum += params.val;
-                        quad_buf.push((q, params));
+                        quad_buf.push((t0, t1, q, params));
                     }
                     let n = ((0.5 * sum / sqrt_remain_tol).ceil() as usize).max(1);
 
@@ -379,14 +387,19 @@ pub fn flatten(
                     let step = sum / (n as f64);
                     let mut i = 1;
                     let mut val_sum = 0.0;
-                    for (q, params) in &quad_buf {
+                    let mut t_ = 0.;
+                    for (t0, t1, q, params) in &quad_buf {
                         let mut target = (i as f64) * step;
                         let recip_val = params.val.recip();
+                        let mut t_g_ = 0.;
+                        let quad_range = (*t0, *t1);
                         while target < val_sum + params.val {
                             let u = (target - val_sum) * recip_val;
                             let t = q.determine_subdiv_t(&params, u);
+                            let t_g = map_range((0.0, 1.0), quad_range, t);
                             let p = q.eval(t);
-                            callback(PathEl::LineTo(p));
+                            callback(PathEl::LineTo(p), idx, t_g_, t_g);
+                            t_g_ = t_g;
                             i += 1;
                             if i == n + 1 {
                                 break;
@@ -394,14 +407,15 @@ pub fn flatten(
                             target = (i as f64) * step;
                         }
                         val_sum += params.val;
+                        t_ = *t1;
                     }
-                    callback(PathEl::LineTo(p3));
+                    callback(PathEl::LineTo(p3), idx, t_, 1.);
                 }
                 last_pt = Some(p3);
             }
             PathEl::ClosePath => {
                 last_pt = None;
-                callback(PathEl::ClosePath);
+                callback(PathEl::ClosePath, idx, 0., 1.);
             }
         }
     }
