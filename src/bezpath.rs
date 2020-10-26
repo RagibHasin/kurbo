@@ -241,9 +241,11 @@ impl BezPath {
 
     /// Returns `true` if the path contains no segments.
     pub fn is_empty(&self) -> bool {
-        !self.0.iter().any(|el| match *el {
-            PathEl::LineTo(..) | PathEl::QuadTo(..) | PathEl::CurveTo(..) => true,
-            _ => false,
+        !self.0.iter().any(|el| {
+            matches!(
+                *el,
+                PathEl::LineTo(..) | PathEl::QuadTo(..) | PathEl::CurveTo(..)
+            )
         })
     }
 

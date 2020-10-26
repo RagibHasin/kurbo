@@ -138,7 +138,7 @@ impl Affine {
     /// First part of the return tuple is the scaling, second part is the angle of rotation (in
     /// radians)
     #[inline]
-    pub(crate) fn svd(self) -> (Vec2, f64) {
+    pub fn svd(self) -> (Vec2, f64) {
         let a = self.0[0];
         let a2 = a * a;
         let b = self.0[1];
