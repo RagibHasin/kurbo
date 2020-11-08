@@ -5,6 +5,7 @@ use std::ops::{Mul, MulAssign};
 use crate::{Point, Rect, Vec2};
 
 /// A 2D affine transform.
+#[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Affine([f64; 6]);

@@ -99,6 +99,7 @@ pub struct BezPath(Vec<PathEl>);
 /// The element of a Bézier path.
 ///
 /// A valid path has `MoveTo` at the beginning of each subpath.
+#[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum PathEl {
@@ -116,6 +117,7 @@ pub enum PathEl {
 }
 
 /// A segment of a Bézier path.
+#[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum PathSeg {
@@ -134,6 +136,7 @@ pub enum PathSeg {
 /// [`Line`]: struct.Line.html
 /// [`PathSeg`]: enum.PathSeg.html
 /// [`PathSeg::intersect_line`]: enum.PathSeg.html#method.intersect_line
+#[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct LineIntersection {
     /// The 'time' that the intersection occurs, on the line.

@@ -102,6 +102,7 @@ use crate::{Rect, Size};
 /// [`Rect`]: struct.Rect.html
 /// [`Insets`]: struct.Insets.html
 /// [`Rect::abs`]: struct.Rect.html#method.abs
+#[repr(C)]
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Insets {

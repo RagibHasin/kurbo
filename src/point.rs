@@ -7,6 +7,7 @@ use crate::common::FloatExt;
 use crate::Vec2;
 
 /// A 2D point.
+#[repr(C)]
 #[derive(Clone, Copy, Default, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Point {

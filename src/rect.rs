@@ -6,6 +6,7 @@ use std::ops::{Add, Sub};
 use crate::{Ellipse, Insets, PathEl, Point, RoundedRect, Shape, Size, Vec2};
 
 /// A rectangle.
+#[repr(C)]
 #[derive(Clone, Copy, Default, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Rect {

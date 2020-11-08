@@ -11,6 +11,7 @@ use crate::{Point, Size};
 /// This is intended primarily for a vector in the mathematical sense,
 /// but it can be interpreted as a translation, and converted to and
 /// from a point (vector relative to the origin) and size.
+#[repr(C)]
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Vec2 {

@@ -10,6 +10,7 @@ use crate::{Arc, BezPath, ParamCurve, PathEl, PathSeg, Point, Vec2};
 // Note: the SVG arc logic is heavily adapted from https://github.com/nical/lyon
 
 /// A single SVG arc segment.
+#[repr(C)]
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SvgArc {

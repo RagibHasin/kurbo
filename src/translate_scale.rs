@@ -33,6 +33,7 @@ use crate::{Affine, Circle, CubicBez, Line, Point, QuadBez, Rect, RoundedRect, V
 ///
 /// This transformation is less powerful than `Affine`, but can be applied
 /// to more primitives, especially including [`Rect`](struct.Rect.html).
+#[repr(C)]
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TranslateScale {

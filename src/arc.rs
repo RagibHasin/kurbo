@@ -7,6 +7,7 @@ use std::{
 };
 
 /// A single arc segment.
+#[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Arc {

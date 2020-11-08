@@ -13,6 +13,7 @@ use std::f64::consts::{FRAC_PI_2, PI};
 ///
 /// [`Rect`]: struct.Rect.html
 /// [`to_rounded_rect`]: struct.Rect.html#method.to_rounded_rect
+#[repr(C)]
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RoundedRect {

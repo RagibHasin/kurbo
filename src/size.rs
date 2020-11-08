@@ -7,6 +7,7 @@ use crate::common::FloatExt;
 use crate::{Rect, RoundedRect, Vec2};
 
 /// A 2D size.
+#[repr(C)]
 #[derive(Clone, Copy, Default, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Size {
