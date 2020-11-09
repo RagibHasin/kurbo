@@ -375,14 +375,14 @@ mod tests {
 
     #[test]
     fn cubicbez_inv_arclen() {
-        // y = x^2
+        // y = x^2 / 100
         let c = CubicBez::new(
             (0.0, 0.0),
-            (1.0 / 3.0, 0.0),
-            (2.0 / 3.0, 1.0 / 3.0),
-            (1.0, 1.0),
+            (100.0 / 3.0, 0.0),
+            (200.0 / 3.0, 100.0 / 3.0),
+            (100.0, 100.0),
         );
-        let true_arclen = 0.5 * 5.0f64.sqrt() + 0.25 * (2.0 + 5.0f64.sqrt()).ln();
+        let true_arclen = 100.0 * (0.5 * 5.0f64.sqrt() + 0.25 * (2.0 + 5.0f64.sqrt()).ln());
         for i in 0..12 {
             let accuracy = 0.1f64.powi(i);
             let n = 10;
@@ -399,6 +399,18 @@ mod tests {
                 );
             }
         }
+        // corner case: user passes accuracy larger than total arc length
+        let accuracy = true_arclen * 1.1;
+        let arc = true_arclen * 0.5;
+        let t = c.inv_arclen(arc, accuracy);
+        let actual_arc = c.subsegment(0.0..t).arclen(accuracy);
+        assert!(
+            (arc - actual_arc).abs() < 2.0 * accuracy,
+            "at accuracy {:e}, want {} got {}",
+            accuracy,
+            actual_arc,
+            arc
+        );
     }
 
     #[test]
