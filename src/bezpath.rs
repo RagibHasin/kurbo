@@ -220,6 +220,13 @@ impl BezPath {
 
     /// Flatten the path, invoking the callback repeatedly.
     ///
+    /// The callback takes
+    ///   * a point [`PathEl`],
+    ///   * index of the segment conataining the point,
+    ///   * paramenter of the previous point,
+    ///   * parameter of this point, and
+    ///   * arclength upto this point
+    ///
     /// Flattening is the action of approximating a curve with a succession of line segments.
     ///
     /// <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 30" height="30mm" width="120mm">
@@ -287,7 +294,17 @@ impl BezPath {
     ///
     /// [Flattening quadratic Béziers]: https://raphlinus.github.io/graphics/curves/2019/12/23/flatten-quadbez.html
     /// [`PathEl`]: enum.PathEl.html
-    pub fn flatten(&self, tolerance: f64, callback: impl FnMut(PathEl, usize, f64, f64)) {
+    pub fn flatten(
+        &self,
+        tolerance: f64,
+        callback: impl FnMut(
+            PathEl,
+            usize, /* idx */
+            f64,   /* t_ */
+            f64,   /* t */
+            f64,   /* s */
+        ),
+    ) {
         flatten(self, tolerance, callback);
     }
 
@@ -379,11 +396,18 @@ const TO_QUAD_TOL: f64 = 0.1;
 pub fn flatten(
     path: impl IntoIterator<Item = PathEl>,
     tolerance: f64,
-    mut callback: impl FnMut(PathEl, usize, f64, f64),
+    mut callback: impl FnMut(
+        PathEl,
+        usize, /* idx */
+        f64,   /* t_ */
+        f64,   /* t */
+        f64,   /* s */
+    ),
 ) {
     let sqrt_tol = tolerance.sqrt();
     let mut last_pt = None;
     let mut quad_buf = Vec::new();
+    let mut arclen = 0f64;
 
     #[inline]
     fn map_range(from: (f64, f64), to: (f64, f64), val: f64) -> f64 {
@@ -394,11 +418,14 @@ pub fn flatten(
         match el {
             PathEl::MoveTo(p) => {
                 last_pt = Some(p);
-                callback(PathEl::MoveTo(p), idx, 0., 1.);
+                callback(PathEl::MoveTo(p), idx, 0., 1., 0.);
             }
             PathEl::LineTo(p) => {
+                if let Some(p0) = last_pt {
+                    arclen += Line { p0, p1: p }.arclen(0.);
+                    callback(PathEl::LineTo(p), idx, 0., 1., arclen);
+                }
                 last_pt = Some(p);
-                callback(PathEl::LineTo(p), idx, 0., 1.);
             }
             PathEl::QuadTo(p1, p2) => {
                 if let Some(p0) = last_pt {
@@ -407,14 +434,18 @@ pub fn flatten(
                     let n = ((0.5 * params.val / sqrt_tol).ceil() as usize).max(1);
                     let step = 1.0 / (n as f64);
                     let mut t_ = 0.;
+                    let mut p_ = p0;
                     for i in 1..(n - 1) {
                         let u = (i as f64) * step;
                         let t = q.determine_subdiv_t(&params, u);
                         let p = q.eval(t);
-                        callback(PathEl::LineTo(p), idx, t_, t);
+                        arclen += Line { p0: p_, p1: p }.arclen(0.);
+                        callback(PathEl::LineTo(p), idx, t_, t, arclen);
                         t_ = t;
+                        p_ = p;
                     }
-                    callback(PathEl::LineTo(p2), idx, t_, 1.);
+                    arclen += Line { p0: p_, p1: p2 }.arclen(0.);
+                    callback(PathEl::LineTo(p2), idx, t_, 1., arclen);
                 }
                 last_pt = Some(p2);
             }
@@ -444,18 +475,22 @@ pub fn flatten(
                     let mut i = 1;
                     let mut val_sum = 0.0;
                     let mut t_ = 0.;
+                    let mut p_ = p0;
                     for (t0, t1, q, params) in &quad_buf {
                         let mut target = (i as f64) * step;
                         let recip_val = params.val.recip();
                         let mut t_g_ = 0.;
                         let quad_range = (*t0, *t1);
+                        p_ = q.p0;
                         while target < val_sum + params.val {
                             let u = (target - val_sum) * recip_val;
                             let t = q.determine_subdiv_t(&params, u);
                             let t_g = map_range((0.0, 1.0), quad_range, t);
                             let p = q.eval(t);
-                            callback(PathEl::LineTo(p), idx, t_g_, t_g);
+                            arclen += Line { p0: p_, p1: p }.arclen(0.);
+                            callback(PathEl::LineTo(p), idx, t_g_, t_g, arclen);
                             t_g_ = t_g;
+                            p_ = p;
                             i += 1;
                             if i == n + 1 {
                                 break;
@@ -465,13 +500,14 @@ pub fn flatten(
                         val_sum += params.val;
                         t_ = *t1;
                     }
-                    callback(PathEl::LineTo(p3), idx, t_, 1.);
+                    arclen += Line { p0: p_, p1: p3 }.arclen(0.);
+                    callback(PathEl::LineTo(p3), idx, t_, 1., arclen);
                 }
                 last_pt = Some(p3);
             }
             PathEl::ClosePath => {
                 last_pt = None;
-                callback(PathEl::ClosePath, idx, 0., 1.);
+                callback(PathEl::ClosePath, idx, 0., 1., arclen);
             }
         }
     }

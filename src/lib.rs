@@ -78,7 +78,8 @@
 #![allow(
     clippy::unreadable_literal,
     clippy::many_single_char_names,
-    clippy::excessive_precision
+    clippy::excessive_precision,
+    clippy::manual_range_contains
 )]
 
 mod affine;
