@@ -418,11 +418,11 @@ pub fn flatten(
         match el {
             PathEl::MoveTo(p) => {
                 last_pt = Some(p);
-                callback(PathEl::MoveTo(p), idx, 0., 1., 0.);
+                callback(PathEl::MoveTo(p), idx, 0., 0., 0.);
             }
             PathEl::LineTo(p) => {
                 if let Some(p0) = last_pt {
-                    arclen += Line { p0, p1: p }.arclen(0.);
+                    arclen += (p0 - p).hypot();
                     callback(PathEl::LineTo(p), idx, 0., 1., arclen);
                 }
                 last_pt = Some(p);
