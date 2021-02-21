@@ -52,9 +52,9 @@
 //! fn closest_perimeter_point(shape: impl Shape, pt: Point) -> Option<Point> {
 //!     let mut best: Option<(Point, f64)> = None;
 //!     for segment in shape.path_segments(DESIRED_ACCURACY) {
-//!         let (t, distance) = segment.nearest(pt, DESIRED_ACCURACY);
-//!         if best.map(|(_, best_d)| distance < best_d).unwrap_or(true) {
-//!             best = Some((segment.eval(t), distance))
+//!         let nearest = segment.nearest(pt, DESIRED_ACCURACY);
+//!         if best.map(|(_, best_d)| nearest.distance_sq < best_d).unwrap_or(true) {
+//!             best = Some((segment.eval(nearest.t), nearest.distance_sq))
 //!         }
 //!     }
 //!     best.map(|(point, _)| point)
@@ -66,9 +66,6 @@
 //! let hit = closest_perimeter_point(circle, hit_point).unwrap();
 //! assert!(hit.distance(expectation) <= DESIRED_ACCURACY);
 //! ```
-//!
-//! [`Shape`]: trait.Shape.html
-//! [`Point`]: struct.Point.html
 //! [`Piet`]: https://docs.rs/piet
 //! [`Druid`]: https://docs.rs/druid
 
@@ -96,6 +93,7 @@ mod point;
 mod quadbez;
 mod rect;
 mod rounded_rect;
+mod rounded_rect_radii;
 mod shape;
 mod size;
 mod svg;
@@ -115,6 +113,7 @@ pub use crate::point::*;
 pub use crate::quadbez::*;
 pub use crate::rect::*;
 pub use crate::rounded_rect::*;
+pub use crate::rounded_rect_radii::*;
 pub use crate::shape::*;
 pub use crate::size::*;
 pub use crate::svg::*;

@@ -3,7 +3,7 @@
 use std::fmt;
 use std::ops::{Add, Sub};
 
-use crate::{Ellipse, Insets, PathEl, Point, RoundedRect, Shape, Size, Vec2};
+use crate::{Ellipse, Insets, PathEl, Point, RoundedRect, RoundedRectRadii, Shape, Size, Vec2};
 
 /// A rectangle.
 #[repr(C)]
@@ -87,8 +87,6 @@ impl Rect {
     /// assert_eq!(inset_rect.x0, -2.0);
     /// assert_eq!(inset_rect.x1, 12.0);
     /// ```
-    ///
-    /// [`Insets`]: struct.Insets.html
     #[inline]
     pub fn inset(self, insets: impl Into<Insets>) -> Rect {
         self + insets.into()
@@ -421,18 +419,35 @@ impl Rect {
         Rect::new(x0, y0, x1, y1)
     }
 
+    /// Scales the `Rect` by `factor` with respect to the origin (the point `(0, 0)`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use kurbo::Rect;
+    ///
+    /// let rect = Rect::new(2., 2., 4., 6.).scale_from_origin(2.);
+    /// assert_eq!(rect.x0, 4.);
+    /// assert_eq!(rect.x1, 8.);
+    /// ```
+    #[inline]
+    pub fn scale_from_origin(self, factor: f64) -> Rect {
+        Rect {
+            x0: self.x0 * factor,
+            y0: self.y0 * factor,
+            x1: self.x1 * factor,
+            y1: self.y1 * factor,
+        }
+    }
+
     /// Creates a new [`RoundedRect`] from this `Rect` and the provided
     /// corner radius.
-    ///
-    /// [`RoundedRect`]: struct.RoundedRect.html
     #[inline]
-    pub fn to_rounded_rect(self, radius: f64) -> RoundedRect {
-        RoundedRect::from_rect(self, radius)
+    pub fn to_rounded_rect(self, radii: impl Into<RoundedRectRadii>) -> RoundedRect {
+        RoundedRect::from_rect(self, radii)
     }
 
     /// Returns the [`Ellipse`] that is bounded by this `Rect`.
-    ///
-    /// [`Ellipse`]: struct.Ellipse.html
     #[inline]
     pub fn to_ellipse(self) -> Ellipse {
         Ellipse::from_rect(self)
@@ -495,6 +510,18 @@ impl Rect {
             let y1 = self.y1 - gap;
             Rect::new(self.x0, y0, self.x1, y1)
         }
+    }
+
+    /// Is this rectangle finite?
+    #[inline]
+    pub fn is_finite(&self) -> bool {
+        self.x0.is_finite() && self.x1.is_finite() && self.y0.is_finite() && self.y1.is_finite()
+    }
+
+    /// Is this rectangle NaN?
+    #[inline]
+    pub fn is_nan(&self) -> bool {
+        self.x0.is_nan() || self.y0.is_nan() || self.x1.is_nan() || self.y1.is_nan()
     }
 }
 

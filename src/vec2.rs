@@ -92,7 +92,9 @@ impl Vec2 {
     /// Thus, in a Y-down coordinate system (as is common for graphics),
     /// it is a clockwise rotation, and in Y-up (traditional for math), it
     /// is anti-clockwise. This convention is consistent with
-    /// [`Affine::rotate`](struct.Affine.html#method.rotate).
+    /// [`Affine::rotate`].
+    ///
+    /// [`Affine::rotate`]: crate::Affine::rotate
     #[inline]
     pub fn from_angle(th: f64) -> Vec2 {
         Vec2 {
@@ -213,6 +215,18 @@ impl Vec2 {
     #[inline]
     pub fn trunc(self) -> Vec2 {
         Vec2::new(self.x.trunc(), self.y.trunc())
+    }
+
+    /// Is this Vec2 finite?
+    #[inline]
+    pub fn is_finite(self) -> bool {
+        self.x.is_finite() && self.y.is_finite()
+    }
+
+    /// Is this Vec2 NaN?
+    #[inline]
+    pub fn is_nan(self) -> bool {
+        self.x.is_nan() || self.y.is_nan()
     }
 }
 

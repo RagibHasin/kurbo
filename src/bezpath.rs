@@ -11,8 +11,8 @@ use arrayvec::ArrayVec;
 use crate::common::{solve_cubic, solve_quadratic};
 use crate::MAX_EXTREMA;
 use crate::{
-    Affine, CubicBez, Line, ParamCurve, ParamCurveArclen, ParamCurveArea, ParamCurveExtrema,
-    ParamCurveNearest, Point, QuadBez, Rect, Shape, TranslateScale,
+    Affine, CubicBez, Line, Nearest, ParamCurve, ParamCurveArclen, ParamCurveArea,
+    ParamCurveExtrema, ParamCurveNearest, Point, QuadBez, Rect, Shape, TranslateScale,
 };
 
 /// A Bézier path.
@@ -81,15 +81,11 @@ use crate::{
 /// for things like subdividing
 ///
 /// [A Primer on Bézier Curves]: https://pomax.github.io/bezierinfo/
-/// [`PathEl`]: enum.PathEl.html
-/// [`PathSeg`]: enum.PathSeg.html
-/// [`QuadBez`]: struct.QuadBez.html
-/// [`CubicBez`]: struct.CubicBez.html
-/// [`iter`]: #method.iter
-/// [`segments`]: #method.segments
-/// [`flatten`]: #method.flatten
-/// [`intersect_line`]: #method.intersect_line
-/// [`segments` free function]: function.segments.html
+/// [`iter`]: BezPath::iter
+/// [`segments`]: BezPath::segments
+/// [`flatten`]: BezPath::flatten
+/// [`intersect_line`]: PathSeg::intersect_line
+/// [`segments` free function]: segments
 /// [`FromIterator<PathEl>`]: std::iter::FromIterator
 /// [`Extend<PathEl>`]: std::iter::Extend
 #[derive(Clone, Default, Debug)]
@@ -132,10 +128,6 @@ pub enum PathSeg {
 /// An intersection of a [`Line`] and a [`PathSeg`].
 ///
 /// This can be generated with the [`PathSeg::intersect_line`] method.
-///
-/// [`Line`]: struct.Line.html
-/// [`PathSeg`]: enum.PathSeg.html
-/// [`PathSeg::intersect_line`]: enum.PathSeg.html#method.intersect_line
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct LineIntersection {
@@ -289,11 +281,10 @@ impl BezPath {
     ///
     /// TODO: write a paper explaining this in more detail.
     ///
-    /// Note: the [`flatten`](fn.flatten.html) function provides the same
+    /// Note: the [`flatten`] function provides the same
     /// functionality but works with slices and other [`PathEl`] iterators.
     ///
     /// [Flattening quadratic Béziers]: https://raphlinus.github.io/graphics/curves/2019/12/23/flatten-quadbez.html
-    /// [`PathEl`]: enum.PathEl.html
     pub fn flatten(
         &self,
         tolerance: f64,
@@ -310,7 +301,7 @@ impl BezPath {
 
     /// Get the segment at the given element index.
     ///
-    /// The element index counts [`PathEl`](enum.PathEl.html) elements, so
+    /// The element index counts [`PathEl`] elements, so
     /// for example includes an initial `Moveto`.
     pub fn get_seg(&self, ix: usize) -> Option<PathSeg> {
         if ix == 0 || ix >= self.0.len() {
@@ -347,6 +338,18 @@ impl BezPath {
         for el in self.0.iter_mut() {
             *el = affine * (*el);
         }
+    }
+
+    /// Is this path finite?
+    #[inline]
+    pub fn is_finite(&self) -> bool {
+        self.0.iter().all(|v| v.is_finite())
+    }
+
+    /// Is this path NaN?
+    #[inline]
+    pub fn is_nan(&self) -> bool {
+        self.0.iter().any(|v| v.is_nan())
     }
 }
 
@@ -390,7 +393,7 @@ const TO_QUAD_TOL: f64 = 0.1;
 
 /// Flatten the path, invoking the callback repeatedly.
 ///
-/// See [`BezPath::flatten`](struct.BezPath.html#method.flatten) for more discussion.
+/// See [`BezPath::flatten`] for more discussion.
 /// This signature is a bit more general, allowing flattening of `&[PathEl]` slices
 /// and other iterators yielding `PathEl`.
 pub fn flatten(
@@ -600,7 +603,7 @@ impl<'a> Mul<&'a BezPath> for TranslateScale {
 /// Transform an iterator over path elements into one over path
 /// segments.
 ///
-/// See also [`BezPath::segments`](struct.BezPath.html#method.segments).
+/// See also [`BezPath::segments`].
 /// This signature is a bit more general, allowing `&[PathEl]` slices
 /// and other iterators yielding `PathEl`.
 pub fn segments<I>(elements: I) -> Segments<I::IntoIter>
@@ -615,7 +618,7 @@ where
 
 /// An iterator that transforms path elements to path segments.
 ///
-/// This struct is created by the [`segments`](fn.segments.html) function.
+/// This struct is created by the [`segments`] function.
 pub struct Segments<I: Iterator<Item = PathEl>> {
     elements: I,
     start_last: Option<(Point, Point)>,
@@ -739,7 +742,7 @@ impl ParamCurveArea for PathSeg {
 }
 
 impl ParamCurveNearest for PathSeg {
-    fn nearest(&self, p: Point, accuracy: f64) -> (f64, f64) {
+    fn nearest(&self, p: Point, accuracy: f64) -> Nearest {
         match *self {
             PathSeg::Line(line) => line.nearest(p, accuracy),
             PathSeg::Quad(quad) => quad.nearest(p, accuracy),
@@ -825,7 +828,7 @@ impl PathSeg {
                 let b = 2.0 * (p1.y - start.y);
                 let c = start.y - p.y;
                 for t in solve_quadratic(c, b, a) {
-                    if t >= 0.0 && t <= 1.0 {
+                    if (0.0..=1.0).contains(&t) {
                         let x = quad.eval(t).x;
                         if p.x >= x {
                             return sign;
@@ -850,7 +853,7 @@ impl PathSeg {
                 let c = 3.0 * (p1.y - start.y);
                 let d = start.y - p.y;
                 for t in solve_cubic(d, c, b, a) {
-                    if t >= 0.0 && t <= 1.0 {
+                    if (0.0..=1.0).contains(&t) {
                         let x = cubic.eval(t).x;
                         if p.x >= x {
                             return sign;
@@ -917,12 +920,12 @@ impl PathSeg {
                 let t = dx * (p0.y - l.p0.y) - dy * (p0.x - l.p0.x);
                 // t = position on self
                 let t = t / det;
-                if t >= -EPSILON && t <= 1.0 + EPSILON {
+                if (-EPSILON..=(1.0 + EPSILON)).contains(&t) {
                     // u = position on probe line
                     let u =
                         (l.p0.x - p0.x) * (l.p1.y - l.p0.y) - (l.p0.y - p0.y) * (l.p1.x - l.p0.x);
                     let u = u / det;
-                    if u >= 0.0 && u <= 1.0 {
+                    if (0.0..=1.0).contains(&u) {
                         result.push(LineIntersection::new(u, t));
                     }
                 }
@@ -939,11 +942,11 @@ impl PathSeg {
                 let c2 = dy * px2 - dx * py2;
                 let invlen2 = (dx * dx + dy * dy).recip();
                 for t in crate::common::solve_quadratic(c0, c1, c2) {
-                    if t >= -EPSILON && t <= 1.0 + EPSILON {
+                    if (-EPSILON..=(1.0 + EPSILON)).contains(&t) {
                         let x = px0 + t * px1 + t * t * px2;
                         let y = py0 + t * py1 + t * t * py2;
                         let u = ((x - p0.x) * dx + (y - p0.y) * dy) * invlen2;
-                        if u >= 0.0 && u <= 1.0 {
+                        if (0.0..=1.0).contains(&u) {
                             result.push(LineIntersection::new(u, t));
                         }
                     }
@@ -959,11 +962,11 @@ impl PathSeg {
                 let c3 = dy * px3 - dx * py3;
                 let invlen2 = (dx * dx + dy * dy).recip();
                 for t in crate::common::solve_cubic(c0, c1, c2, c3) {
-                    if t >= -EPSILON && t <= 1.0 + EPSILON {
+                    if (-EPSILON..=(1.0 + EPSILON)).contains(&t) {
                         let x = px0 + t * px1 + t * t * px2 + t * t * t * px3;
                         let y = py0 + t * py1 + t * t * py2 + t * t * t * py3;
                         let u = ((x - p0.x) * dx + (y - p0.y) * dy) * invlen2;
-                        if u >= 0.0 && u <= 1.0 {
+                        if (0.0..=1.0).contains(&u) {
                             result.push(LineIntersection::new(u, t));
                         }
                     }
@@ -972,11 +975,43 @@ impl PathSeg {
         }
         result
     }
+
+    /// Is this Bezier path finite?
+    #[inline]
+    pub fn is_finite(&self) -> bool {
+        match self {
+            PathSeg::Line(line) => line.is_finite(),
+            PathSeg::Quad(quad_bez) => quad_bez.is_finite(),
+            PathSeg::Cubic(cubic_bez) => cubic_bez.is_finite(),
+        }
+    }
+
+    /// Is this Bezier path NaN?
+    #[inline]
+    pub fn is_nan(&self) -> bool {
+        match self {
+            PathSeg::Line(line) => line.is_nan(),
+            PathSeg::Quad(quad_bez) => quad_bez.is_nan(),
+            PathSeg::Cubic(cubic_bez) => cubic_bez.is_nan(),
+        }
+    }
 }
 
 impl LineIntersection {
     fn new(line_t: f64, segment_t: f64) -> Self {
         LineIntersection { line_t, segment_t }
+    }
+
+    /// Is this line intersection finite?
+    #[inline]
+    pub fn is_finite(self) -> bool {
+        self.line_t.is_finite() && self.segment_t.is_finite()
+    }
+
+    /// Is this line intersection NaN?
+    #[inline]
+    pub fn is_nan(self) -> bool {
+        self.line_t.is_nan() || self.segment_t.is_nan()
     }
 }
 
@@ -1050,6 +1085,32 @@ impl Shape for BezPath {
 
     fn as_path_slice(&self) -> Option<&[PathEl]> {
         Some(&self.0)
+    }
+}
+
+impl PathEl {
+    /// Is this path element finite?
+    #[inline]
+    pub fn is_finite(&self) -> bool {
+        match self {
+            PathEl::MoveTo(p) => p.is_finite(),
+            PathEl::LineTo(p) => p.is_finite(),
+            PathEl::QuadTo(p, p2) => p.is_finite() && p2.is_finite(),
+            PathEl::CurveTo(p, p2, p3) => p.is_finite() && p2.is_finite() && p3.is_finite(),
+            PathEl::ClosePath => true,
+        }
+    }
+
+    /// Is this path element NaN?
+    #[inline]
+    pub fn is_nan(&self) -> bool {
+        match self {
+            PathEl::MoveTo(p) => p.is_nan(),
+            PathEl::LineTo(p) => p.is_nan(),
+            PathEl::QuadTo(p, p2) => p.is_nan() || p2.is_nan(),
+            PathEl::CurveTo(p, p2, p3) => p.is_nan() || p2.is_nan() || p3.is_nan(),
+            PathEl::ClosePath => false,
+        }
     }
 }
 

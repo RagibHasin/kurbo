@@ -34,7 +34,7 @@ impl Affine {
     /// [Wikipedia](https://en.wikipedia.org/wiki/Affine_transformation)
     /// formulation of affine transformation as augmented matrix. The
     /// idea is that `(A * B) * v == A * (B * v)`, where `*` is the
-    /// [`Mul`](https://doc.rust-lang.org/std/ops/trait.Mul.html) trait.
+    /// [`Mul`](std::ops::Mul) trait.
     #[inline]
     pub const fn new(c: [f64; 6]) -> Affine {
         Affine(c)
@@ -73,6 +73,14 @@ impl Affine {
     pub fn translate<V: Into<Vec2>>(p: V) -> Affine {
         let p = p.into();
         Affine([1.0, 0.0, 0.0, 1.0, p.x, p.y])
+    }
+
+    /// Creates an affine transformation that takes the unit square to the given rectangle.
+    ///
+    /// Useful when you want to draw into the unit square but have your output fill any rectangle.
+    /// In this case push the `Affine` onto the transform stack.
+    pub fn map_unit_square(rect: Rect) -> Affine {
+        Affine([rect.width(), 0., 0., rect.height(), rect.x0, rect.y0])
     }
 
     /// Get the coefficients of the transform.
@@ -114,6 +122,28 @@ impl Affine {
         let p10 = self * Point::new(rect.x1, rect.y0);
         let p11 = self * Point::new(rect.x1, rect.y1);
         Rect::from_points(p00, p01).union(Rect::from_points(p10, p11))
+    }
+
+    /// Is this map finite?
+    #[inline]
+    pub fn is_finite(&self) -> bool {
+        self.0[0].is_finite()
+            && self.0[1].is_finite()
+            && self.0[2].is_finite()
+            && self.0[3].is_finite()
+            && self.0[4].is_finite()
+            && self.0[5].is_finite()
+    }
+
+    /// Is this map NaN?
+    #[inline]
+    pub fn is_nan(&self) -> bool {
+        self.0[0].is_nan()
+            || self.0[1].is_nan()
+            || self.0[2].is_nan()
+            || self.0[3].is_nan()
+            || self.0[4].is_nan()
+            || self.0[5].is_nan()
     }
 
     /// Compute the singular value decomposition of the linear transformation (ignoring the

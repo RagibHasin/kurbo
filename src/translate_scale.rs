@@ -2,7 +2,9 @@
 
 use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
 
-use crate::{Affine, Circle, CubicBez, Line, Point, QuadBez, Rect, RoundedRect, Vec2};
+use crate::{
+    Affine, Circle, CubicBez, Line, Point, QuadBez, Rect, RoundedRect, RoundedRectRadii, Vec2,
+};
 
 /// A transformation including scaling and translation.
 ///
@@ -15,7 +17,7 @@ use crate::{Affine, Circle, CubicBez, Line, Point, QuadBez, Rect, RoundedRect, V
 /// | 0 0 1 |
 /// ```
 ///
-/// See [`Affine`](struct.Affine.html) for more details about the
+/// See [`Affine`] for more details about the
 /// equivalence with augmented matrices.
 ///
 /// Various multiplication ops are defined, and these are all defined
@@ -32,8 +34,7 @@ use crate::{Affine, Circle, CubicBez, Line, Point, QuadBez, Rect, RoundedRect, V
 /// has an implicit conversion).
 ///
 /// This transformation is less powerful than `Affine`, but can be applied
-/// to more primitives, especially including [`Rect`](struct.Rect.html).
-#[repr(C)]
+/// to more primitives, especially including [`Rect`].
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TranslateScale {
@@ -78,6 +79,18 @@ impl TranslateScale {
             translation: self.translation * -scale_recip,
             scale: scale_recip,
         }
+    }
+
+    /// Is this translate/scale finite?
+    #[inline]
+    pub fn is_finite(&self) -> bool {
+        self.translation.is_finite() && self.scale.is_finite()
+    }
+
+    /// Is this translate/scale NaN?
+    #[inline]
+    pub fn is_nan(&self) -> bool {
+        self.translation.is_nan() || self.scale.is_nan()
     }
 }
 
@@ -216,7 +229,21 @@ impl Mul<RoundedRect> for TranslateScale {
 
     #[inline]
     fn mul(self, other: RoundedRect) -> RoundedRect {
-        RoundedRect::from_rect(self * other.rect(), self.scale * other.radius())
+        RoundedRect::from_rect(self * other.rect(), self * other.radii())
+    }
+}
+
+impl Mul<RoundedRectRadii> for TranslateScale {
+    type Output = RoundedRectRadii;
+
+    #[inline]
+    fn mul(self, other: RoundedRectRadii) -> RoundedRectRadii {
+        RoundedRectRadii::new(
+            self.scale * other.top_left,
+            self.scale * other.top_right,
+            self.scale * other.bottom_right,
+            self.scale * other.bottom_left,
+        )
     }
 }
 

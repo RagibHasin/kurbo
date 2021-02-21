@@ -4,7 +4,7 @@ use std::fmt;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
 use crate::common::FloatExt;
-use crate::{Rect, RoundedRect, Vec2};
+use crate::{Rect, RoundedRect, RoundedRectRadii, Vec2};
 
 /// A 2D size.
 #[repr(C)]
@@ -87,8 +87,6 @@ impl Size {
 
     /// Convert this size into a [`Vec2`], with `width` mapped to `x` and `height`
     /// mapped to `y`.
-    ///
-    /// [`Vec2`]: struct.Vec2.html
     #[inline]
     pub const fn to_vec2(self) -> Vec2 {
         Vec2::new(self.width, self.height)
@@ -202,8 +200,6 @@ impl Size {
     }
 
     /// Convert this `Size` into a [`Rect`] with origin `(0.0, 0.0)`.
-    ///
-    /// [`Rect`]: struct.Rect.html
     #[inline]
     pub const fn to_rect(self) -> Rect {
         Rect::new(0., 0., self.width, self.height)
@@ -211,11 +207,21 @@ impl Size {
 
     /// Convert this `Size` into a [`RoundedRect`] with origin `(0.0, 0.0)` and
     /// the provided corner radius.
-    ///
-    /// [`RoundedRect`]: struct.RoundedRect.html
     #[inline]
-    pub fn to_rounded_rect(self, radius: f64) -> RoundedRect {
-        self.to_rect().to_rounded_rect(radius)
+    pub fn to_rounded_rect(self, radii: impl Into<RoundedRectRadii>) -> RoundedRect {
+        self.to_rect().to_rounded_rect(radii)
+    }
+
+    /// Is this size finite?
+    #[inline]
+    pub fn is_finite(self) -> bool {
+        self.width.is_finite() && self.height.is_finite()
+    }
+
+    /// Is this size NaN?
+    #[inline]
+    pub fn is_nan(self) -> bool {
+        self.width.is_nan() || self.height.is_nan()
     }
 }
 
@@ -338,14 +344,6 @@ impl From<Size> for (f64, f64) {
     #[inline]
     fn from(v: Size) -> (f64, f64) {
         (v.width, v.height)
-    }
-}
-
-//FIXME: remove for 0.6.0 https://github.com/linebender/kurbo/issues/95
-impl Into<Size> for Vec2 {
-    #[inline]
-    fn into(self) -> Size {
-        self.to_size()
     }
 }
 

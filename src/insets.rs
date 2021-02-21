@@ -98,11 +98,6 @@ use crate::{Rect, Size};
 /// assert_eq!(insets2.x_value(), insets.x_value());
 /// assert_eq!(insets2.y_value(), insets.y_value());
 /// ```
-///
-/// [`Rect`]: struct.Rect.html
-/// [`Insets`]: struct.Insets.html
-/// [`Rect::abs`]: struct.Rect.html#method.abs
-#[repr(C)]
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Insets {
@@ -201,9 +196,8 @@ impl Insets {
     /// assert_eq!(insets.size(), Size::new(insets.x_value(), insets.y_value()));
     /// ```
     ///
-    /// [`Size`]: struct.Size.html
-    /// [`x_value`]: #method.x_value
-    /// [`y_value`]: #method.y_value
+    /// [`x_value`]: Insets::x_value
+    /// [`y_value`]: Insets::y_value
     pub fn size(self) -> Size {
         Size::new(self.x_value(), self.y_value())
     }
@@ -237,6 +231,18 @@ impl Insets {
             x1: x1.max(0.0),
             y1: y1.max(0.0),
         }
+    }
+
+    /// Are these insets finite?
+    #[inline]
+    pub fn is_finite(&self) -> bool {
+        self.x0.is_finite() && self.y0.is_finite() && self.x1.is_finite() && self.y1.is_finite()
+    }
+
+    /// Are these insets NaN?
+    #[inline]
+    pub fn is_nan(&self) -> bool {
+        self.x0.is_nan() || self.y0.is_nan() || self.x1.is_nan() || self.y1.is_nan()
     }
 }
 

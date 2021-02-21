@@ -5,9 +5,9 @@ use std::ops::{Add, Mul, Range, Sub};
 use arrayvec::ArrayVec;
 
 use crate::{
-    Affine, ParamCurve, ParamCurveArclen, ParamCurveArea, ParamCurveCurvature, ParamCurveDeriv,
-    ParamCurveExtrema, ParamCurveNearest, PathEl, Point, Rect, Shape, Vec2, DEFAULT_ACCURACY,
-    MAX_EXTREMA,
+    Affine, Nearest, ParamCurve, ParamCurveArclen, ParamCurveArea, ParamCurveCurvature,
+    ParamCurveDeriv, ParamCurveExtrema, ParamCurveNearest, PathEl, Point, Rect, Shape, Vec2,
+    DEFAULT_ACCURACY, MAX_EXTREMA,
 };
 
 /// A single line.
@@ -35,6 +35,18 @@ impl Line {
     #[inline]
     pub fn length(self) -> f64 {
         self.arclen(DEFAULT_ACCURACY)
+    }
+
+    /// Is this line finite?
+    #[inline]
+    pub fn is_finite(self) -> bool {
+        self.p0.is_finite() && self.p0.is_finite()
+    }
+
+    /// Is this line NaN?
+    #[inline]
+    pub fn is_nan(self) -> bool {
+        self.p0.is_nan() || self.p1.is_nan()
     }
 }
 
@@ -87,11 +99,11 @@ impl ParamCurveArea for Line {
 }
 
 impl ParamCurveNearest for Line {
-    fn nearest(&self, p: Point, _accuracy: f64) -> (f64, f64) {
+    fn nearest(&self, p: Point, _accuracy: f64) -> Nearest {
         let d = self.p1 - self.p0;
         let dotp = d.dot(p - self.p0);
         let d_squared = d.dot(d);
-        if dotp <= 0.0 {
+        let (t, distance_sq) = if dotp <= 0.0 {
             (0.0, (p - self.p0).hypot2())
         } else if dotp >= d_squared {
             (1.0, (p - self.p1).hypot2())
@@ -99,7 +111,8 @@ impl ParamCurveNearest for Line {
             let t = dotp / d_squared;
             let dist = (p - self.eval(t)).hypot2();
             (t, dist)
-        }
+        };
+        Nearest { t, distance_sq }
     }
 }
 
@@ -121,6 +134,20 @@ impl ParamCurveExtrema for Line {
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ConstPoint(Point);
+
+impl ConstPoint {
+    /// Is this point finite?
+    #[inline]
+    pub fn is_finite(self) -> bool {
+        self.0.is_finite()
+    }
+
+    /// Is this point NaN?
+    #[inline]
+    pub fn is_nan(self) -> bool {
+        self.0.is_nan()
+    }
+}
 
 impl ParamCurve for ConstPoint {
     #[inline]

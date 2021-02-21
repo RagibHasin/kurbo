@@ -30,8 +30,6 @@ impl Ellipse {
     ///
     /// Rotation is clockwise in a y-down coordinate system. For more on
     /// rotation, see [`Affine::rotate`].
-    ///
-    /// [`Affine::rotate`]: Affine::rotate
     #[inline]
     pub fn new(center: impl Into<Point>, radii: impl Into<Vec2>, x_rotation: f64) -> Ellipse {
         let Point { x: cx, y: cy } = center.into();
@@ -46,8 +44,7 @@ impl Ellipse {
     /// This ellipse is always axis-aligned; to apply rotation you can call
     /// [`with_rotation`] with the result.
     ///
-    /// [`Rect`]: struct.Rect.html
-    /// [`with_rotation`]: #method.with_rotation
+    /// [`with_rotation`]: Ellipse::with_rotation
     #[inline]
     pub fn from_rect(rect: Rect) -> Self {
         let center = rect.center().to_vec2();
@@ -84,8 +81,6 @@ impl Ellipse {
     ///
     /// The rotation is clockwise, for a y-down coordinate system. For more
     /// on rotation, See [`Affine::rotate`].
-    ///
-    /// [`Affine::rotate`]: Affine::rotate
     #[must_use]
     pub fn with_rotation(self, rotation: f64) -> Ellipse {
         let scale = self.inner.svd().0;
@@ -135,6 +130,18 @@ impl Ellipse {
     /// an ellipse with the two radii on the x and y axes.
     pub fn rotation(&self) -> f64 {
         self.inner.svd().1
+    }
+
+    /// Is this ellipse finite?
+    #[inline]
+    pub fn is_finite(&self) -> bool {
+        self.inner.is_finite()
+    }
+
+    /// Is this ellipse NaN?
+    #[inline]
+    pub fn is_nan(&self) -> bool {
+        self.inner.is_nan()
     }
 
     #[doc(hidden)]
