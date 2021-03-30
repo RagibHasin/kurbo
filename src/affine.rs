@@ -11,6 +11,9 @@ use crate::{Point, Rect, Vec2};
 pub struct Affine([f64; 6]);
 
 impl Affine {
+    /// The identity transform.
+    pub const IDENTITY: Affine = Affine::scale(1.0);
+
     /// A transform that is flipped on the y-axis. Useful for converting between
     /// y-up and y-down spaces.
     pub const FLIP_Y: Affine = Affine::new([1.0, 0., 0., -1.0, 0., 0.]);
@@ -213,7 +216,7 @@ impl Affine {
 impl Default for Affine {
     #[inline]
     fn default() -> Affine {
-        Affine::scale(1.0)
+        Affine::IDENTITY
     }
 }
 
